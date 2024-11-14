@@ -33,6 +33,7 @@
 #include <asn/ngap/ASN_NGAP_UserLocationInformationNR.h>
 #include <asn/ngap/ASN_NGAP_PDUSessionResourceToBeSwitchedDLList.h>
 #include <asn/ngap/ASN_NGAP_PDUSessionResourceToBeSwitchedDLItem.h>
+#include <asn/ngap/ASN_NGAP_PathSwitchRequestAcknowledge.h>
 
 namespace nr::gnb
 {
@@ -303,6 +304,18 @@ void NgapTask::sendPathSwitchRequest(int ueId)
     sendNgapUeAssociated(ueId, pdu);
 }
 
+void NgapTask::receivePathSwitchRequestAck(int amfId, ASN_NGAP_PathSwitchRequestAcknowledge *msg)
+{
+    m_logger->debug("Path Switch Request Acknowledge received");
+    auto *ue = findUeByNgapIdPair(amfId, ngap_utils::FindNgapIdPair(msg));
+    if (ue == nullptr) {
+        m_logger->err("UE context not found!");
+        return;
+    }
+    // TODO add handler
+    return;
+
+}
 void NgapTask::receiveAmfConfigurationUpdate(int amfId, ASN_NGAP_AMFConfigurationUpdate *msg)
 {
     m_logger->debug("AMF configuration update received");
