@@ -30,6 +30,9 @@
 #include <asn/ngap/ASN_NGAP_ServedGUAMIItem.h>
 #include <asn/ngap/ASN_NGAP_SliceSupportItem.h>
 #include <asn/ngap/ASN_NGAP_SupportedTAItem.h>
+#include <asn/ngap/ASN_NGAP_UserLocationInformationNR.h>
+#include <asn/ngap/ASN_NGAP_PDUSessionResourceToBeSwitchedDLList.h>
+#include <asn/ngap/ASN_NGAP_PDUSessionResourceToBeSwitchedDLItem.h>
 
 namespace nr::gnb
 {
@@ -251,6 +254,53 @@ void NgapTask::sendErrorIndication(int amfId, NgapCause cause, int ueId)
         sendNgapUeAssociated(ueId, pdu);
     else
         sendNgapNonUe(amfId, pdu);
+}
+
+void NgapTask::sendPathSwitchRequest(int ueId)
+{
+    m_logger->debug("Sending PathSwitchRequest for UE: %d", ueId);
+
+    auto *ue = findUeContext(ueId);
+    if (ue == nullptr) {
+        m_logger->debug("UE context not found: %d", ueId);
+        return;
+    }
+    
+    std::vector<ASN_NGAP_PathSwitchRequestIEs *> ies;
+
+    auto ieUeSecCap = asn::New<ASN_NGAP_PathSwitchRequestIEs>();
+    ieUeSecCap->id = ASN_NGAP_ProtocolIE_ID_id_UESecurityCapabilities;
+    ieUeSecCap->criticality = ASN_NGAP_Criticality_ignore;
+    ieUeSecCap->value.present = ASN_NGAP_PathSwitchRequestIEs__value_PR_UESecurityCapabilities;
+    asn::SetBitString(ieUeSecCap->value.choice.UESecurityCapabilities.nRencryptionAlgorithms, OctetString::FromHex("FFFF"));
+    asn::SetBitString(ieUeSecCap->value.choice.UESecurityCapabilities.nRintegrityProtectionAlgorithms, OctetString::FromHex("FFFF"));
+    asn::SetBitString(ieUeSecCap->value.choice.UESecurityCapabilities.eUTRAencryptionAlgorithms, OctetString::FromHex("FFFF"));
+    asn::SetBitString(ieUeSecCap->value.choice.UESecurityCapabilities.eUTRAintegrityProtectionAlgorithms, OctetString::FromHex("FFFF"));
+    ies.push_back(ieUeSecCap);
+
+    if (!ue->pduSessions.empty()) {
+        auto iePduSessionsList = asn::New<ASN_NGAP_PathSwitchRequestIEs>();
+        iePduSessionsList->id = ASN_NGAP_ProtocolIE_ID_id_PDUSessionResourceToBeSwitchedDLList;
+        iePduSessionsList->criticality = ASN_NGAP_Criticality_reject;
+        iePduSessionsList->value.present = ASN_NGAP_PathSwitchRequestIEs__value_PR_PDUSessionResourceToBeSwitchedDLList;
+
+        for (int psi : ue->pduSessions)
+        {
+            auto *pduItem = asn::New<ASN_NGAP_PDUSessionResourceToBeSwitchedDLItem>();
+            pduItem->pDUSessionID = psi;
+            // TODO: Get TNL info from GTP
+            std::string ss = "001f7f00000f000000020002";
+            asn::SetOctetString(pduItem->pathSwitchRequestTransfer, OctetString::FromHex(ss));
+            asn::SequenceAdd(iePduSessionsList->value.choice.PDUSessionResourceToBeSwitchedDLList, pduItem);
+        }
+        ies.push_back(iePduSessionsList);
+
+    } else {
+        m_logger->debug("No UE sessions to be switched for UE context: %d", ueId);
+        return;
+    }
+    auto *pdu = asn::ngap::NewMessagePdu<ASN_NGAP_PathSwitchRequest>(ies);
+    sendNgapUeAssociated(ueId, pdu);
 }
 
 void NgapTask::receiveAmfConfigurationUpdate(int amfId, ASN_NGAP_AMFConfigurationUpdate *msg)

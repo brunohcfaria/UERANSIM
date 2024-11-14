@@ -154,6 +154,17 @@ void GnbCmdHandler::handleCmdImpl(NmGnbCliCommand &msg)
         }
         break;
     }
+    case app::GnbCliCommand::PATH_SWITCH_REQ: {
+        if (m_base->ngapTask->m_ueCtx.count(msg.cmd->ueId) == 0)
+            sendError(msg.address, "UE not found with given ID");
+        else
+        {
+            auto ue = m_base->ngapTask->m_ueCtx[msg.cmd->ueId];
+            m_base->ngapTask->sendPathSwitchRequest(ue->ctxId);
+            sendResult(msg.address, "Requesting UE Path Switch Request");
+        }
+        break;
+    }
     }
 }
 

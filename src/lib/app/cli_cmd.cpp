@@ -152,6 +152,7 @@ static OrderedMap<std::string, CmdEntry> g_gnbCmdEntries = {
     {"ue-list", {"List all UEs associated with the gNB", "", DefaultDesc, false}},
     {"ue-count", {"Print the total number of UEs connected the this gNB", "", DefaultDesc, false}},
     {"ue-release", {"Request a UE context release for the given UE", "<ue-id>", DefaultDesc, false}},
+    {"path-switch-request", {"Perform Path Switch Request for the given UE", "<ue-id>", DefaultDesc, false}},
 };
 
 static OrderedMap<std::string, CmdEntry> g_ueCmdEntries = {
@@ -216,7 +217,19 @@ static std::unique_ptr<GnbCliCommand> GnbCliParseImpl(const std::string &subCmd,
             CMD_ERR("Invalid UE ID")
         return cmd;
     }
-
+    else if (subCmd == "path-switch-request")
+    {
+        auto cmd = std::make_unique<GnbCliCommand>(GnbCliCommand::PATH_SWITCH_REQ);
+        if (options.positionalCount() == 0)
+            CMD_ERR("UE ID is expected")
+        if (options.positionalCount() > 1)
+            CMD_ERR("Only one UE ID is expected")
+        cmd->ueId = utils::ParseInt(options.getPositional(0));
+        if (cmd->ueId <= 0)
+            CMD_ERR("Invalid UE ID")
+        return cmd;
+    }
+ 
     return nullptr;
 }
 

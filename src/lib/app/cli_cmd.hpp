@@ -29,6 +29,7 @@ struct GnbCliCommand
         UE_LIST,
         UE_COUNT,
         UE_RELEASE_REQ,
+        PATH_SWITCH_REQ,        
     } present;
 
     // AMF_INFO
